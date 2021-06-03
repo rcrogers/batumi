@@ -67,7 +67,7 @@ private:
   uint8_t waveform_offset_;
   uint16_t sync_counter_;
   
-  void SetFrequency(int8_t lfo_no);
+  void SetFrequency(int8_t lfo_no, int16_t div);
 
   DISALLOW_COPY_AND_ASSIGN(Processor);
 };

@@ -87,7 +87,7 @@ inline uint16_t AdcValuesToLevel(uint16_t pot, int16_t fine, int16_t cv) {
   return Interpolate88(lut_scale_phase, ctrl);
 }
 
-void Processor::SetFrequency(int8_t lfo_no) {
+void Processor::SetFrequency(int8_t lfo_no, int16_t div = 0) {
 
   int16_t cv = (filtered_cv_[lfo_no] * ui_->atten(lfo_no)) >> 16;
 
@@ -95,10 +95,10 @@ void Processor::SetFrequency(int8_t lfo_no) {
   if (ui_->sync_mode()) {
     if (cv > 0) {
       lfo_[lfo_no].set_multiplier((cv * 8 / 32767) + 1);
-      lfo_[lfo_no].set_divider(1);
+      lfo_[lfo_no].set_divider(1 << div);
     } else {
       lfo_[lfo_no].set_multiplier(1);
-      lfo_[lfo_no].set_divider((-cv * 8 / 32767) + 1);
+      lfo_[lfo_no].set_divider(((-cv * 8 / 32767) + 1) << div);
     }
   }
 
@@ -224,7 +224,9 @@ void Processor::Process() {
 
   case FEAT_MODE_PHASE:
   {
-    SetFrequency(0);
+    int16_t master_div = (8 * static_cast<int32_t>(65535 - ui_->phase(0))) >> 16;
+    CONSTRAIN(master_div, 0, 7);
+    SetFrequency(0, master_div);
 
     // reset 2 holds the LFOs
     lfo_[0].set_hold(reset_triggered_[1]);
@@ -251,9 +253,9 @@ void Processor::Process() {
 	lfo_[i].set_initial_phase(AdcValuesToPhase(ui_->coarse(i),
 						   ui_->fine(i),
 						   cv));
-	int16_t div = (7 * static_cast<int32_t>(65535 - ui_->phase(i))) >> 16;
-	CONSTRAIN(div, 1, 16);
-	lfo_[i].set_divider(div);
+	int16_t div = (8 * static_cast<int32_t>(65535 - ui_->phase(i))) >> 16;
+	CONSTRAIN(div, 0, 7);
+	lfo_[i].set_divider((1 << master_div) << div);
       }
   }
   break;
